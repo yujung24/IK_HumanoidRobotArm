@@ -80,11 +80,12 @@ q1 = J0*(X1-X0) + q0;
 
 %% ======================== continuous moving ========================
 
+% FK : X0, -> q0 -> q1 -> J^(-1)
 
 q_new = simplify(J_inv*(X1-X0) + q_old);
 assume(th3 > 0 & th3 < pi/2); % singularity
 
-
+% Xdot, J_inv
 
 while(q_new==q_old)
     q_new = qdot - q_old;
