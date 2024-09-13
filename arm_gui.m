@@ -25,7 +25,7 @@ dhparams = [0, 0, -L0, 0;
             L5, 0, 0, 0];
 
 
-iiwa_MDH = robotics.RigidBodyTree;
+srcirc24_MDH = robotics.RigidBodyTree;
 
 body1 = robotics.RigidBody('body1');
 jnt1 = robotics.Joint('jnt1','fixed');
@@ -33,7 +33,7 @@ jnt1 = robotics.Joint('jnt1','fixed');
 setFixedTransform(jnt1,dhparams(1,:),'mdh');
 body1.Joint = jnt1;
 
-addBody(iiwa_MDH,body1,'base')
+addBody(srcirc24_MDH,body1,'base')
 
 body2 = robotics.RigidBody('body2');
 jnt2 = robotics.Joint('jnt2','revolute');
@@ -67,17 +67,17 @@ body7.Joint = jnt7;
 body8.Joint = jnt8;
 
 
-addBody(iiwa_MDH,body2,'body1')
-addBody(iiwa_MDH,body3,'body2')
-addBody(iiwa_MDH,body4,'body3')
-addBody(iiwa_MDH,body5,'body4')
-addBody(iiwa_MDH,body6,'body5')
-addBody(iiwa_MDH,body7,'body6')
-addBody(iiwa_MDH,body8,'body7')
+addBody(srcirc24_MDH,body2,'body1')
+addBody(srcirc24_MDH,body3,'body2')
+addBody(srcirc24_MDH,body4,'body3')
+addBody(srcirc24_MDH,body5,'body4')
+addBody(srcirc24_MDH,body6,'body5')
+addBody(srcirc24_MDH,body7,'body6')
+addBody(srcirc24_MDH,body8,'body7')
 
 figure;
 
-show(iiwa_MDH);
+show(srcirc24_MDH);
 
 %robot = importrobot('iiwa14.urdf');
 %robot.show('visuals','off');
