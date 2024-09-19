@@ -1,28 +1,28 @@
 clc, clear
 close all  
-L0=0.6; L1=67.50; L2=53.94; L3=25.00; L4=126.20; L5=148.57; % [mm] -> [m] 
-d1 = 30; d2=25.00;
-%pi=3.141592;
-th1=pi/4; th2=pi/4; th3=pi/4;
-%th1=0;th2=0;th3=0;
 
-% R -> L (X->Z)
-% dhparams = [0, pi/2, 0, 0;
-%             0, 0, L1,  th1;
-%             0, 0, 0, -pi/2;
-%             L3, -pi/2, L2, th2;
-%             0,-pi/2, 0, pi/2;
-%             -L4,-pi/2, 0, (pi/2)+th3;
-%             L5, 0, 0, 0];
+L1 = 67.50; L2 = 53.94; L3 = 126.20; L4 = 148.57;
+d1 = 45.50; d2 = 25.00;
 
-dhparams = [0, 0, -L0, 0;
-            0, pi/2, d1, th1;
+%syms x1 y1 z1
+x1 = 0.98;
+y1 = 0.05;
+z1 = 0.01;
+
+L1=L1/100;L2=L2/100;L3=L3/100;L4=L4/100;
+d1=d1/100;d2=d2/100;
+
+syms th1 th2 th3
+%th1=pi/4; th2=pi/4; th3=pi/4;
+
+dhparams = [0, 0, -d1, 0;
+            0, pi/2, L1, th1;
             0, 0, L2, -pi/2;
             d2, -pi/2, 0, th2;
-            0,-pi/2, -L4, pi/2;
-            0,-pi/2, 0, 0;
-            0, 0, 0, (pi/2)+th3;
-            L5, 0, 0, 0];
+            0,-pi/2, 0, pi/2;
+            0,-pi/2, 0, pi/2;
+            L3, 0, 0, th3;
+            L4, 0, 0, 0];
 
 
 srcirc24_MDH = robotics.RigidBodyTree;
@@ -75,9 +75,103 @@ addBody(srcirc24_MDH,body6,'body5')
 addBody(srcirc24_MDH,body7,'body6')
 addBody(srcirc24_MDH,body8,'body7')
 
-figure;
 
-show(srcirc24_MDH);
+gik = generalizedInverseKinematics("RigidBodyTree",srcirc24_MDH)
 
-%robot = importrobot('iiwa14.urdf');
-%robot.show('visuals','off');
+value = inverseKinematics("RigidBodyTree",srcirc24_MDH)
+
+
+dhparams = [0, 0, -d1, 0;
+            0, pi/2, L1, th1;
+            0, 0, L2, -pi/2;
+            d2, -pi/2, 0, th2;
+            0,-pi/2, 0, pi/2;
+            0,-pi/2, 0, pi/2;
+            L3, 0, 0, th3;
+            L4, 0, 0, 0];
+
+for i=1:size(dhparams,1)
+    MT = DHmodified(dhparams(i,:));
+    if i==1
+        MT0e=MT;
+    else
+        MT0e = MT0e*MT;
+    end
+    
+end
+
+i=1;
+period = 0.03;
+dt=0.01;
+
+
+th_M = [th1 th2 th3];
+J_M(i,j) = diff(MT0e(i,4), th_M(j));
+J_M_inv = J_M^(-1);
+lim1 = 0; lim2 = pi/2;
+
+J0 = subs(J_M,[th1;th2;th3],q0);
+J0_inv = J0^(-1);
+
+q0 = [pi/4; pi/4; pi/4];
+
+for tt = 0:dt:period+1
+    if i==1
+        q_old = q0;
+        J_inv = J0_inv;
+        X_new = X1;
+        X_old = X0;
+    else
+        q_old = q_new;
+        %X_old = X_new;
+        %X_new = subs(MT0e(1:3, 4), [th1;th2;th3], q_old);
+        X_old = subs(MT0e(1:3, 4), [th1;th2;th3], q_old); %FK
+        X_new = X1;
+        J = subs(J_M,[th1;th2;th3],q_old);
+    end
+    q_new = J_inv*(X_new-X_old) + q_old;
+    if X_new == X_old
+        disp("arrive!");
+        break;
+    end
+    if(th3 == lim1 | th3 == lim2)
+        disp("not valid position!");
+        break;
+    end
+    i=i+1;
+end
+
+X0 = MT0e(1:3,4)%subs(MT0e(1:3, 4), th1, pi/4);
+X1 = [0.05; 0.02; 0.01]; 
+
+Ts=0.01;
+wayPoints = [X0(1:2) X1(1:2)] ;
+timestamps = [0 0.3]; % 0 period
+timevec = timestamps(1):Ts:timestamps(end);
+
+[q,qd,qdd,~] = cubicpolytraj(wayPoints,timestamps,timevec);
+%figure;
+
+%show(srcirc24_MDH);
+%gui = interactiveRigidBodyTree(srcirc24_MDH,MarkerScaleFactor=1.0);
+
+plot(timevec, q)
+hold all
+plot(timestamps, wayPoints, 'x')
+xlabel('t')
+ylabel('Positions')
+legend('X-positions','Y-positions')
+hold off
+
+
+function [T] = DHmodified(mdhparams)
+
+a= mdhparams(1);
+alpha= mdhparams(2); 
+d= mdhparams(3);
+th= mdhparams(4);
+    [T] = [           cos(th)             -sin(th)             0               a;
+           sin(th)*cos(alpha)   cos(th)*cos(alpha)   -sin(alpha)   -d*sin(alpha);
+           sin(th)*sin(alpha)   cos(th)*sin(alpha)    cos(alpha)    d*cos(alpha);
+                            0                    0             0               1];
+end
